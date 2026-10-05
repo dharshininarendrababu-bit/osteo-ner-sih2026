@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OsteoNER - AI Early Detection System for Knee Osteoarthritis (SIH26004)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (!window.tailwind) {
+      document.write('<script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"><\/script>');
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Pulse glow effects */
+    .glow-emerald { box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3); }
+    .glow-amber { box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.3); }
+    .glow-rose { box-shadow: 0 0 15px -3px rgba(244, 63, 94, 0.3); }
+    .glow-cyan { box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35); }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printable-report, #printable-report * { visibility: visible; }
+      #printable-report { position: absolute; left: 0; top: 0; width: 100%; background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+  <!-- TOP APP NAV BAR -->
+  <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 via-emerald-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-teal-500/20">
+          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-teal-300 via-cyan-200 to-emerald-300 bg-clip-text text-transparent">OsteoNER AI</span>
+            <span class="px-2 py-0.5 text-xs font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/30 rounded-full">SIH 2026 • SIH26004</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Early Osteoarthritis Risk Screening for North Eastern Region (NER)</p>
+        </div>
+      </div>
+
+      <!-- Quick status & controls -->
+      <div class="flex items-center gap-3">
+        <!-- Language Selector with Voice Flag -->
+        <div class="flex items-center bg-slate-800/80 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+          <svg class="w-3.5 h-3.5 text-slate-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+          <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer">
+            <option value="en" class="bg-slate-900">English (NER Standard)</option>
+            <option value="as" class="bg-slate-900">অসমীয়া (Assamese)</option>
+            <option value="hi" class="bg-slate-900">हिन्दी (Hindi)</option>
+            <option value="bn" class="bg-slate-900">বাংলা (Bengali)</option>
+          </select>
+        </div>
+
+        <!-- Voice Guidance Switch -->
+        <button id="ttsToggleBtn" onclick="toggleTTS()" title="Toggle Local Language Voice Guidance" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20">
+          <svg id="ttsIcon" class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+          <span class="hidden md:inline" id="ttsStatusLabel">Voice: ON</span>
+        </button>
+
+        <!-- Network / Offline Sync status -->
+        <button onclick="toggleNetworkMode()" id="networkBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="networkText">Online / Synced</span>
+        </button>
+
+        <!-- Hardware Connect Indicator -->
+        <div id="hwStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          <span class="text-slate-300 font-mono text-[11px] hidden sm:inline">ESP32-KneeKit v2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN NAVIGATION TABS -->
+    <div class="border-t border-slate-800/80 bg-slate-900/60 px-4 sm:px-6 lg:px-8">
+      <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar py-2" aria-label="Tabs">
+        <button onclick="switchTab('camp')" id="tab-btn-camp" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-500/40">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span data-i18n="tab_camp">ASHA Field Screening</span>
+        </button>
+
+        <button onclick="switchTab('sensor')" id="tab-btn-sensor" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span data-i18n="tab_sensor">Wearable Sensor & VAG Lab</span>
+        </button>
+
+        <button onclick="switchTab('ai')" id="tab-btn-ai" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span data-i18n="tab_ai">Multimodal AI Engine</span>
+        </button>
+
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span data-i18n="tab_dashboard">NER State Health Dashboard</span>
+        </button>
+
+        <button onclick="switchTab('report')" id="tab-btn-report" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span data-i18n="tab_report">PHC Referral Slip</span>
+        </button>
+
+        <button onclick="switchTab('specs')" id="tab-btn-specs" class="tab-btn px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          <span>Hardware & TinyML Specs</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: ASHA FIELD SCREENING WORKFLOW       -->
+    <!-- ========================================== -->
+    <section id="view-camp" class="tab-view space-y-6">
+      <!-- Camp Header Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Active Camp: #NER-CAMP-2026-084
+            </span>
+            <span class="text-xs text-slate-400">PHC Rangapara, Sonitpur District, Assam</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Community-Based Early Knee OA Screening
+            <button onclick="speakCurrentContext('welcome')" class="text-teal-400 hover:text-teal-300 p-1" title="Voice Assist">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0-12l-4 4H4v4h4l4 4V6z"/></svg>
+            </button>
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-400">Standardized protocol: Patient Profile &rarr; NER Lifestyle Risk &rarr; 30s Gait/Sit-to-Stand Test &rarr; Hybrid AI Triage</p>
+        </div>
+
+        <!-- Quick Patient Selector / Presets -->
+        <div class="flex flex-wrap items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-700/80">
+          <span class="text-xs text-slate-400 font-medium">Quick Test Cohorts:</span>
+          <button onclick="loadSamplePatient('tea_worker')" class="px-2.5 py-1 text-xs font-medium rounded-md bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 border border-teal-500/40">
+            🍃 Tea Plucker (48y F, High Risk)
+          </button>
+          <button onclick="loadSamplePatient('hill_farmer')" class="px-2.5 py-1 text-xs font-medium rounded-md bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40">
+            🏔 Hill Farmer (55y M, Moderate)
+          </button>
+          <button onclick="loadSamplePatient('young_weaver')" class="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40">
+            🧶 Handloom Weaver (29y F, Low)
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Form & Assessment Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Column 1: Patient Profile & NER Lifestyle Survey (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Card: Demographics -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 class="font-semibold text-base text-slate-100 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">1</span>
+                Patient Demographics & Identification
+              </h2>
+              <span class="text-xs text-slate-500 font-mono">ABHA / NHM Linked</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
+                <input type="text" id="patientName" value="Monali Bora" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-teal-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Age & Gender</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="number" id="patientAge" value="48" min="18" max="95" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-teal-500">
+                  <select id="patientGender" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-sm text-slate-100 focus:outline-none focus:border-teal-500">
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">State / District</label>
+                <select id="patientDistrict" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-teal-500">
+                  <option value="Sonitpur, Assam">Sonitpur, Assam</option>
+                  <option value="East Khasi Hills, Meghalaya">East Khasi Hills, Meghalaya</option>
+                  <option value="Dibrugarh, Assam">Dibrugarh, Assam</option>
+                  <option value="Papum Pare, Arunachal">Papum Pare, Arunachal</option>
+                  <option value="Kohima, Nagaland">Kohima, Nagaland</option>
+                  <option value="Aizawl, Mizoram">Aizawl, Mizoram</option>
+                  <option value="East Sikkim, Sikkim">East Sikkim, Sikkim</option>
+                  <option value="West Tripura, Tripura">West Tripura, Tripura</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Weight & Height (BMI)</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="number" id="patientWeight" value="58" placeholder="kg" oninput="calculateBMI()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100">
+                  <input type="number" id="patientHeight" value="152" placeholder="cm" oninput="calculateBMI()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100">
+                </div>
+                <div class="mt-1 text-[11px] text-teal-400 font-mono" id="bmiBadge">BMI: 25.1 kg/m² (Overweight)</div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Target Knee</label>
+                <select id="targetKnee" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100">
+                  <option value="Right Knee">Right Knee (Sensors Placed)</option>
+                  <option value="Left Knee">Left Knee</option>
+                  <option value="Bilateral">Bilateral Both Knees</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Primary Symptom</label>
+                <select id="patientSymptom" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100">
+                  <option value="Crepitus & morning stiffness">Crepitus & morning stiffness (&lt;30m)</option>
+                  <option value="Deep aching on downhill walking">Deep aching on downhill walking</option>
+                  <option value="Difficulty standing from floor">Difficulty standing from floor</option>
+                  <option value="Mild intermittent fatigue">Mild intermittent fatigue</option>
+                  <option value="Asymptomatic checkup">Asymptomatic routine checkup</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: NER-Specific Risk Factors Questionnaire -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 class="font-semibold text-base text-slate-100 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">2</span>
+                  NER Population-Specific Lifestyle & Occupational Risk Factors
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Calibrated for regional ergonomics, terrain, biomechanics, and climate</p>
+              </div>
+              <button onclick="speakCurrentContext('lifestyle')" class="text-teal-400 hover:text-teal-300" title="Audio explain in local language">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 10a4 4 0 010 8m2.5-10a7 7 0 010 12"/></svg>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Occupation -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">
+                  Occupation & Workload Pattern
+                  <span class="text-teal-400 text-[11px] block text-xs">High patellofemoral & tibiofemoral joint stress</span>
+                </label>
+                <select id="riskOccupation" onchange="recalculateHybridRisk()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-teal-500">
+                  <option value="tea_worker" selected>🍃 Tea Garden Plucker (Head basket load 15-20kg + slope)</option>
+                  <option value="hill_farmer">🏔 Hill Terrace Farmer (Uneven slope descent + hoeing)</option>
+                  <option value="weaver">🧶 Traditional Handloom Weaver (Continuous floor sitting)</option>
+                  <option value="porter">🎒 Hill Porter / Headload Carrier (Heavy incline carriage)</option>
+                  <option value="domestic">🏠 Domestic / Chulha & River Washing</option>
+                  <option value="desk">🏢 Desk / Shopkeeper / Low Joint Stress</option>
+                </select>
+              </div>
+
+              <!-- Squatting / Floor Sitting Habits -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">
+                  Daily Squatting & Deep Knee Flexion (&gt;120°)
+                  <span class="text-teal-400 text-[11px] block text-xs">Floor cooking, squat toilets, hand-plucking</span>
+                </label>
+                <select id="riskSquatting" onchange="recalculateHybridRisk()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-teal-500">
+                  <option value="severe" selected>&gt; 5 hours daily (High cartilage shear strain)</option>
+                  <option value="moderate">3 to 5 hours daily</option>
+                  <option value="mild">1 to 3 hours daily</option>
+                  <option value="rare">&lt; 1 hour daily (Chair seated mostly)</option>
+                </select>
+              </div>
+
+              <!-- Terrain Elevation Exposure -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">
+                  Daily Terrain Incline / Downhill Walking
+                  <span class="text-teal-400 text-[11px] block text-xs">Eccentric quadriceps load & cartilage impact shock</span>
+                </label>
+                <select id="riskTerrain" onchange="recalculateHybridRisk()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-teal-500">
+                  <option value="steep" selected>Steep Hill Slopes (&gt;20° daily gradient)</option>
+                  <option value="rolling">Rolling Hillocks / Tea estate bunds</option>
+                  <option value="flat">Plains / Brahmaputra Valley flatland</option>
+                </select>
+              </div>
+
+              <!-- Cold Damp Microclimate Index -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">
+                  Cold-Damp Microclimate Exposure
+                  <span class="text-teal-400 text-[11px] block text-xs">High monsoon humidity + winter hill dampness</span>
+                </label>
+                <select id="riskClimate" onchange="recalculateHybridRisk()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-teal-500">
+                  <option value="high" selected>High (High altitude + prolonged damp tea garden mist)</option>
+                  <option value="moderate">Moderate seasonal exposure</option>
+                  <option value="low">Low / Indoor climate buffered</option>
+                </select>
+              </div>
+
+              <!-- Previous Joint Injury -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Previous Knee Injury or Meniscal Sprain</label>
+                <select id="riskInjury" onchange="recalculateHybridRisk()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-teal-500">
+                  <option value="yes">Yes (Slip on slope / twisting fall)</option>
+                  <option value="no" selected>No prior major knee trauma</option>
+                </select>
+              </div>
+
+              <!-- Subjective Pain Score (VAS 0-10) -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-xs font-medium text-slate-300">Self-Reported Joint Discomfort (VAS)</label>
+                  <span id="vasValueLabel" class="text-xs font-bold text-amber-400">4 / 10 (Moderate)</span>
+                </div>
+                <input type="range" id="riskVAS" min="0" max="10" value="4" oninput="updateVAS(this.value)" class="w-full accent-teal-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+              </div>
+            </div>
+
+            <!-- Calculated Lifestyle Score Banner -->
+            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                <span class="text-xs text-slate-300">NER Lifestyle & Occupational Predisposition:</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-24 bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                  <div id="lifestyleProgressBar" class="bg-amber-400 h-2.5 rounded-full" style="width: 78%"></div>
+                </div>
+                <span id="lifestyleScoreBadge" class="text-xs font-mono font-bold text-amber-300">78 / 100 (High)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Optional Knee Image / Radiograph Upload & Edge ML Inference -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 class="font-semibold text-base text-slate-100 flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">3</span>
+                  Multimodal Knee Image / X-Ray Classifier (CNN ResNet-18)
+                </h2>
+                <p class="text-xs text-slate-400">Optional: Phone camera joint photo OR clinic radiograph (Pre-radiological screening flags early changes)</p>
+              </div>
+              <span class="px-2 py-0.5 text-[11px] rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">Edge CNN Enabled</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+              <div class="sm:col-span-5 bg-slate-950 border-2 border-dashed border-slate-700 rounded-xl p-3 text-center relative overflow-hidden group">
+                <div id="imagePreviewBox" class="flex flex-col items-center justify-center min-h-[140px]">
+                  <div class="w-20 h-20 rounded-lg bg-slate-800/80 flex items-center justify-center mb-2 overflow-hidden border border-slate-700">
+                    <svg id="xrayIconPlaceholder" class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <canvas id="xraySimCanvas" width="80" height="80" class="hidden w-full h-full object-cover"></canvas>
+                  </div>
+                  <span class="text-xs text-slate-400 font-medium">Click to Load Sample Knee Radiograph</span>
+                  <div class="flex gap-2 mt-2">
+                    <button onclick="loadSampleXRay('early')" class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600">Sample KL-1</button>
+                    <button onclick="loadSampleXRay('mod')" class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600">Sample KL-2</button>
+                    <button onclick="loadSampleXRay('normal')" class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600">Normal KL-0</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sm:col-span-7 space-y-2 text-xs">
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Kellgren-Lawrence (KL) Grade:</span>
+                  <span id="klGradeBadge" class="font-bold font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Grade 1: Doubtful JSN</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Joint Space Narrowing (JSN):</span>
+                  <span id="jsnBadge" class="font-mono text-slate-200">Minimal Medial (3.8mm vs 5.2mm ref)</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Osteophyte Formation:</span>
+                  <span id="osteoBadge" class="font-mono text-slate-200">Subtle tibial spine sharpening</span>
+                </div>
+                <div class="p-2 bg-slate-950 rounded-lg border border-slate-800 mt-2">
+                  <span class="text-[11px] text-teal-300 font-medium block">Clinical AI Insight:</span>
+                  <p id="xrayAiInsight" class="text-[11px] text-slate-400 mt-0.5">Early pre-radiological changes. Traditional X-ray often misses this phase; our IMU-VAG acoustic crepitus flags early molecular cartilage fibrillations.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Column 2: Live Test Protocol & AI Multimodal Result (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- Card: Wearable Test Execution Widget -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 class="font-semibold text-base text-slate-100 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">4</span>
+                Knee Wearable Test Protocol
+              </h2>
+              <span class="text-xs px-2 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-500/30">30s Standard Test</span>
+            </div>
+
+            <!-- Protocol Step Instructions with Voice Guidance -->
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-300" id="testPhaseTitle">Phase 1: 10-Meter Flat Walk + 5x Sit-to-Stand</span>
+                <button onclick="playVoiceInstruction()" class="flex items-center gap-1 text-[11px] font-medium text-teal-400 hover:text-teal-300">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0-12l-4 4H4v4h4l4 4V6z"/></svg>
+                  <span>Hear Audio (Selected Lang)</span>
+                </button>
+              </div>
+              <p class="text-xs text-slate-400" id="testInstructionText">
+                1. Fasten ESP32 wearable strap over the right knee patella.<br>
+                2. Instruct patient to walk 10 paces across the room, then sit and stand 5 times.<br>
+                3. The piezo acoustic sensor captures sub-audible crepitus while the IMU logs gait cadence and knee angular deceleration.
+              </p>
+            </div>
+
+            <!-- Live Mini Telemetry Preview -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-center text-xs text-slate-400">
+                <span>IMU Gait Angular Velocity (deg/s)</span>
+                <span id="liveImuRate" class="font-mono text-cyan-400">100 Hz Streaming</span>
+              </div>
+              <div class="h-20 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden relative">
+                <canvas id="miniGaitCanvas" class="w-full h-full"></canvas>
+                <div class="absolute bottom-1 right-2 text-[10px] text-slate-500 font-mono">Gait Flexion/Extension</div>
+              </div>
+
+              <div class="flex justify-between items-center text-xs text-slate-400 pt-1">
+                <span>Vag Acoustic Crepitus (Piezo Contact Mic)</span>
+                <span id="liveCrepitusRate" class="font-mono text-amber-400">High-Freq Spikes</span>
+              </div>
+              <div class="h-20 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden relative">
+                <canvas id="miniAcousticCanvas" class="w-full h-full"></canvas>
+                <div class="absolute bottom-1 right-2 text-[10px] text-slate-500 font-mono">Acoustic Burst Energy</div>
+              </div>
+            </div>
+
+            <!-- Test Execution Controls -->
+            <div class="pt-2 flex flex-col gap-2">
+              <button id="startTestBtn" onclick="toggleTestExecution()" class="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 flex items-center justify-center gap-2 shadow-lg shadow-teal-500/25 transition-all">
+                <svg id="testBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="testBtnText">Run 30-Second Screening Test</span>
+              </button>
+
+              <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                <span id="testTimerText">Test Duration: 0.0s / 30.0s</span>
+                <span id="testProgressBadge" class="text-teal-400 font-mono">Ready to calibrate</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Hybrid Multimodal AI Triage Result Card -->
+          <div id="aiResultCard" class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+            <!-- Background subtle glow -->
+            <div class="absolute -right-10 -bottom-10 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl"></div>
+
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 class="font-bold text-base text-slate-100 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">AI</span>
+                Multimodal Screening Verdict
+              </h2>
+              <span id="triageBadge" class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                MODERATE RISK (EARLY OA)
+              </span>
+            </div>
+
+            <!-- Risk Score Dial & Key Metrics -->
+            <div class="grid grid-cols-2 gap-3 items-center">
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                <span class="text-[11px] text-slate-400 block">Overall Risk Index</span>
+                <div class="text-3xl font-extrabold text-amber-400 font-mono my-1" id="compositeScoreNum">68%</div>
+                <span class="text-[11px] text-slate-400" id="confidenceIntervalLabel">CI: 64% - 73% (High Conf)</span>
+              </div>
+
+              <div class="space-y-1.5 text-xs">
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-400">
+                    <span>Gait Asymmetry:</span>
+                    <span id="scoreGait" class="font-mono text-amber-300">62%</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div id="barGait" class="bg-amber-400 h-1.5" style="width: 62%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-400">
+                    <span>VAG Crepitus:</span>
+                    <span id="scoreAcoustic" class="font-mono text-rose-300">74%</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div id="barAcoustic" class="bg-rose-400 h-1.5" style="width: 74%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-400">
+                    <span>NER Lifestyle Risk:</span>
+                    <span id="scoreLifestyle" class="font-mono text-amber-300">78%</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div id="barLifestyle" class="bg-amber-400 h-1.5" style="width: 78%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actionable Recommendations & Triage -->
+            <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+              <span class="font-semibold text-slate-200 block text-xs">Recommended Action & PHC Referral:</span>
+              <ul class="space-y-1 text-slate-300" id="triageActionList">
+                <li class="flex items-start gap-1.5">
+                  <span class="text-amber-400 font-bold">•</span>
+                  <span><strong>PHC Consultation:</strong> Auto-refer to Sonitpur District Hospital / Tea Estate Health Centre within 14 days.</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-amber-400 font-bold">•</span>
+                  <span><strong>Ergonomic Adaptation:</strong> Advise low stool (pidha) instead of full deep squatting during tea sorting & chulha cooking.</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-amber-400 font-bold">•</span>
+                  <span><strong>Isometric Quad Exercises:</strong> Daily 10m quadriceps strengthening to stabilize joint shock on hill descent.</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Button to open print slip -->
+            <div class="flex gap-2 pt-1">
+              <button onclick="generateAndOpenReferral()" class="flex-1 py-2.5 px-3 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                <span>Generate Official Referral Slip</span>
+              </button>
+              <button onclick="speakResultVerdict()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1" title="Speak verdict to patient in local language">
+                <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0-12l-4 4H4v4h4l4 4V6z"/></svg>
+                <span>Voice Tell</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: WEARABLE SENSOR & VAG ACOUSTIC LAB  -->
+    <!-- ========================================== -->
+    <section id="view-sensor" class="tab-view hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded">ESP32 Hardware Simulation</span>
+              <span class="text-xs text-slate-400">Sampling Rate: IMU 100Hz | Piezo VAG 2000Hz (Downsampled for Display)</span>
+            </div>
+            <h2 class="text-xl font-bold text-white mt-1">Real-Time Gait Kinematics & Acoustic Crepitus Oscilloscope</h2>
+            <p class="text-xs text-slate-400">Captures micro-vibrations generated by rough articular surfaces rubbing together during flexion</p>
+          </div>
+
+          <!-- Controls for Signal Generation -->
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="text-xs text-slate-400">Simulate Pathological State:</label>
+            <select id="signalPresetSelect" onchange="changeSignalPreset(this.value)" class="bg-slate-950 border border-slate-700 text-xs rounded-lg px-3 py-1.5 text-slate-200">
+              <option value="early_oa">Early OA (High Frequency Acoustic Bursts + Slight Stride Lag)</option>
+              <option value="moderate_oa">Moderate OA (Frequent Crepitus + Marked Gait Asymmetry)</option>
+              <option value="severe_oa">Severe OA (Continuous Joint Friction + Slow Flexion)</option>
+              <option value="healthy">Healthy Joint (Smooth Sinusoidal Gait + Low Acoustic Floor)</option>
+            </select>
+            <button onclick="injectNoise()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-300">
+              + Add Hill Terrain Vibration
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-Time Waveforms Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Left: IMU Accelerometer & Gyroscope Kinematics -->
+          <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                <span class="text-sm font-semibold text-slate-200">Knee IMU Kinematic Signals</span>
+              </div>
+              <div class="flex items-center gap-3 text-xs font-mono">
+                <span class="text-cyan-400">Acc Z: <span id="valAccZ">0.82 g</span></span>
+                <span class="text-emerald-400">Gyro &omega;: <span id="valGyroY">42 &deg;/s</span></span>
+              </div>
+            </div>
+
+            <!-- Oscilloscope Canvas 1 -->
+            <div class="h-64 w-full bg-slate-900/90 rounded-lg border border-slate-800 relative overflow-hidden">
+              <canvas id="imuOscilloscope" class="w-full h-full"></canvas>
+              <!-- Grid markings -->
+              <div class="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              <div class="absolute top-2 left-2 text-[10px] font-mono text-cyan-400/80 bg-slate-950/80 px-2 py-0.5 rounded border border-cyan-500/20">
+                Stride Periodicity: 1.12s | Cadence: 94 spm
+              </div>
+            </div>
+
+            <!-- Gait Metrics Row -->
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Gait Symmetry Index</span>
+                <span id="gsiMetric" class="text-sm font-mono font-bold text-amber-400">0.72 (Norm: &gt;0.90)</span>
+              </div>
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Stance/Swing Ratio</span>
+                <span id="stanceRatioMetric" class="text-sm font-mono font-bold text-slate-200">68% / 32%</span>
+              </div>
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Angular Jerk Index</span>
+                <span id="jerkMetric" class="text-sm font-mono font-bold text-rose-400">14.8 m/s³</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Acoustic Piezo Contact-Mic Vibroarthrography (VAG) -->
+          <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                <span class="text-sm font-semibold text-slate-200">Piezo Acoustic Crepitus (VAG)</span>
+              </div>
+              <div class="flex items-center gap-3 text-xs font-mono">
+                <span class="text-rose-400">Spectral Peak: <span id="valVagPeak">480 Hz</span></span>
+                <span class="text-amber-400">Burst Energy: <span id="valVagEnergy">72 &mu;V²</span></span>
+              </div>
+            </div>
+
+            <!-- Oscilloscope Canvas 2 -->
+            <div class="h-64 w-full bg-slate-900/90 rounded-lg border border-slate-800 relative overflow-hidden">
+              <canvas id="acousticOscilloscope" class="w-full h-full"></canvas>
+              <!-- Grid markings -->
+              <div class="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#f43f5e_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              <div class="absolute top-2 left-2 text-[10px] font-mono text-rose-400/80 bg-slate-950/80 px-2 py-0.5 rounded border border-rose-500/20">
+                Bandpass: 100 Hz - 1000 Hz (Acoustic Crepitus Band)
+              </div>
+              <div id="crepitusSpikeBadge" class="absolute bottom-2 right-2 text-[10px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40">
+                Crepitus Spikes Detected: 14 bursts/min
+              </div>
+            </div>
+
+            <!-- VAG Metrics Row -->
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">VAG Burst Rate</span>
+                <span id="vagBurstMetric" class="text-sm font-mono font-bold text-rose-400">22 / cycle</span>
+              </div>
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Spectral Entropy</span>
+                <span id="vagEntropyMetric" class="text-sm font-mono font-bold text-amber-400">0.81 (High Chaos)</span>
+              </div>
+              <div class="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Mean Power (MPF)</span>
+                <span id="vagMpfMetric" class="text-sm font-mono font-bold text-slate-200">345 Hz</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Sensor Placement & Calibration Guidance -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0 font-bold">A</div>
+            <div>
+              <span class="font-semibold text-slate-200 block">Acoustic Sensor Placement</span>
+              <p class="text-slate-400 mt-0.5">Piezo contact disc strapped directly over the lateral patellar facet with medical hypoallergenic silicone pad.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 font-bold">B</div>
+            <div>
+              <span class="font-semibold text-slate-200 block">IMU Alignment</span>
+              <p class="text-slate-400 mt-0.5">6-axis IMU positioned 5cm above the knee joint line on the anterior thigh axis to capture true sagittal knee angles.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 font-bold">C</div>
+            <div>
+              <span class="font-semibold text-slate-200 block">Auto-Baseline Calibration</span>
+              <p class="text-slate-400 mt-0.5">3-second standing baseline subtraction removes environmental noise, clothing rustle, and baseline tilt.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: MULTIMODAL AI MODEL ENGINE         -->
+    <!-- ========================================== -->
+    <section id="view-ai" class="tab-view hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 rounded-full">
+              CNN-LSTM + Multimodal Late Fusion Pipeline
+            </span>
+          </div>
+          <h2 class="text-xl font-bold text-white mt-1">Deep Learning Architecture for Early Pre-Radiological OA</h2>
+          <p class="text-xs text-slate-400">Combines high-frequency kinematic temporal features, acoustic crepitus bursts, and regional epidemiological priors</p>
+        </div>
+
+        <!-- Architectural diagram visualizer -->
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-6">
+          <div class="text-xs font-mono text-slate-400 text-center uppercase tracking-wider mb-2">Multimodal Inference Flow</div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Branch 1: Gait Time-Series -->
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-cyan-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-cyan-400 font-semibold text-xs">
+                <span>Branch 1: Gait Kinematics</span>
+              </div>
+              <p class="text-[11px] text-slate-400">6-channel time series (Accel X/Y/Z + Gyro X/Y/Z @ 100Hz)</p>
+              <div class="p-2 bg-slate-950 rounded text-[11px] font-mono text-cyan-300">
+                1D-CNN (Kernel 7) &rarr; Bi-LSTM (64 units) &rarr; Temporal Attention
+              </div>
+              <div class="text-[11px] text-slate-400 flex justify-between pt-1">
+                <span>Output Feature:</span>
+                <span class="text-cyan-400 font-mono">64-dim Gait Vector</span>
+              </div>
+            </div>
+
+            <!-- Branch 2: VAG Joint Sound -->
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-rose-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-rose-400 font-semibold text-xs">
+                <span>Branch 2: Vibroarthrography</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Piezo contact sound (STFT Spectrogram + 100-1000Hz bursts)</p>
+              <div class="p-2 bg-slate-950 rounded text-[11px] font-mono text-rose-300">
+                STFT Mel-Filter &rarr; 2D ResNet-9 &rarr; Crepitus Spike Counting
+              </div>
+              <div class="text-[11px] text-slate-400 flex justify-between pt-1">
+                <span>Output Feature:</span>
+                <span class="text-rose-400 font-mono">32-dim Acoustic Vector</span>
+              </div>
+            </div>
+
+            <!-- Branch 3: NER Lifestyle Prior -->
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-amber-500/30 space-y-2">
+              <div class="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+                <span>Branch 3: NER Lifestyle Prior</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Tea plucker load, squatting hours, slope gradient, climate</p>
+              <div class="p-2 bg-slate-950 rounded text-[11px] font-mono text-amber-300">
+                Dense MLP (32 &rarr; 16) &rarr; Regional Odds Weighting
+              </div>
+              <div class="text-[11px] text-slate-400 flex justify-between pt-1">
+                <span>Output Feature:</span>
+                <span class="text-amber-400 font-mono">16-dim Risk Vector</span>
+              </div>
+            </div>
+
+            <!-- Branch 4: Fusion & Triage -->
+            <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-4 rounded-xl border border-teal-500/50 space-y-2">
+              <div class="flex items-center gap-2 text-teal-400 font-semibold text-xs">
+                <span>Late Fusion & Triage</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Concatenation + Cross-modal Attention + Softmax</p>
+              <div class="p-2 bg-teal-950/40 rounded text-[11px] font-mono text-teal-300 border border-teal-500/30">
+                Dense (112 &rarr; 3 classes) &rarr; Low / Mod / High Risk
+              </div>
+              <div class="text-[11px] text-slate-400 flex justify-between pt-1">
+                <span>Inference Latency:</span>
+                <span class="text-teal-400 font-mono font-bold">18ms on ESP32-S3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model Explainability & Radar Chart Feature Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
+            <h3 class="font-semibold text-sm text-slate-200">Multimodal Feature Attribution (SHAP / Attention)</h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Acoustic Crepitus Burst Density (Articular Wear)</span>
+                  <span class="text-rose-400 font-mono">34% Impact</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-rose-400 h-2" style="width: 34%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>NER Squatting & Slope Load Duration</span>
+                  <span class="text-amber-400 font-mono">28% Impact</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-amber-400 h-2" style="width: 28%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Gait Flexion Deceleration & Stride Asymmetry</span>
+                  <span class="text-cyan-400 font-mono">23% Impact</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-cyan-400 h-2" style="width: 23%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Age, BMI & Cold-Damp Climate Factor</span>
+                  <span class="text-emerald-400 font-mono">15% Impact</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-emerald-400 h-2" style="width: 15%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-3">
+            <h3 class="font-semibold text-sm text-slate-200">Validation Performance (NER Pilot Cohort)</h3>
+            <div class="grid grid-cols-2 gap-3 text-center">
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Sensitivity (Pre-X-Ray OA)</span>
+                <span class="text-xl font-bold font-mono text-teal-400">91.4%</span>
+                <span class="text-[10px] text-slate-500 block mt-0.5">Vs Clinical Specialist DX</span>
+              </div>
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Specificity</span>
+                <span class="text-xl font-bold font-mono text-cyan-400">88.7%</span>
+                <span class="text-[10px] text-slate-500 block mt-0.5">Controls & Asymptomatic</span>
+              </div>
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">ROC-AUC Score</span>
+                <span class="text-xl font-bold font-mono text-indigo-400">0.932</span>
+                <span class="text-[10px] text-slate-500 block mt-0.5">Multimodal Ensemble</span>
+              </div>
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Model Memory Footprint</span>
+                <span class="text-xl font-bold font-mono text-emerald-400">184 KB</span>
+                <span class="text-[10px] text-slate-500 block mt-0.5">Quantized INT8 on Flash</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: NER STATE HEALTH DASHBOARD          -->
+    <!-- ========================================== -->
+    <section id="view-dashboard" class="tab-view hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded">
+                National Health Mission • NER Epidemiological Grid
+              </span>
+              <span class="text-xs text-slate-400">Live Sync: Guwahati Regional Node</span>
+            </div>
+            <h2 class="text-xl font-bold text-white mt-1">North Eastern Region (NER) Knee OA Hotspot Surveillance</h2>
+            <p class="text-xs text-slate-400">Tracking disease burden across 8 North-Eastern states to prioritize mobile orthopedic camps and physiotherapy supplies</p>
+          </div>
+
+          <!-- Sync Trigger / Filter -->
+          <div class="flex items-center gap-2">
+            <button onclick="triggerCloudSync()" class="px-3 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Sync Offline ASHA Batches</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- High-level KPI Metric Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs text-slate-400 block">Total Screened (NER)</span>
+            <div class="text-2xl font-bold font-mono text-white mt-1">28,450</div>
+            <span class="text-[11px] text-emerald-400 font-medium">↑ 1,240 this week in 34 camps</span>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs text-slate-400 block">Early OA Flagged (&lt; Grade 2)</span>
+            <div class="text-2xl font-bold font-mono text-amber-400 mt-1">7,812 (27.4%)</div>
+            <span class="text-[11px] text-amber-300 font-medium">Intervened before joint collapse</span>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs text-slate-400 block">High Risk / Urgent Referral</span>
+            <div class="text-2xl font-bold font-mono text-rose-400 mt-1">2,145 (7.5%)</div>
+            <span class="text-[11px] text-rose-300 font-medium">Referred to District Hospitals</span>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs text-slate-400 block">Estimated Surgery Savings</span>
+            <div class="text-2xl font-bold font-mono text-cyan-400 mt-1">₹ 14.8 Cr</div>
+            <span class="text-[11px] text-cyan-300 font-medium">By early lifestyle/physio arrest</span>
+          </div>
+        </div>
+
+        <!-- Interactive Map & Hotspot Matrix -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- State Hotspot Table (7 cols) -->
+          <div class="lg:col-span-7 bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-sm text-slate-200">State-Wise Screening & Hotspot Vulnerability Index</h3>
+              <span class="text-xs text-slate-500 font-mono">Updated: Today</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-900 text-slate-400 uppercase font-mono text-[11px] border-b border-slate-800">
+                  <tr>
+                    <th class="py-2.5 px-3">State / Priority District</th>
+                    <th class="py-2.5 px-2">Primary Cohort</th>
+                    <th class="py-2.5 px-2">Screened</th>
+                    <th class="py-2.5 px-2">Early OA Rate</th>
+                    <th class="py-2.5 px-2">Hotspot Level</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-mono">
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Assam (Dibrugarh, Sonitpur, Cachar)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Tea Garden Workers</td>
+                    <td class="py-2.5 px-2">12,420</td>
+                    <td class="py-2.5 px-2 text-rose-400 font-bold">34.2%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">CRITICAL</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Meghalaya (East Khasi Hills, Ri-Bhoi)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Steep Hill Farmers</td>
+                    <td class="py-2.5 px-2">4,810</td>
+                    <td class="py-2.5 px-2 text-amber-400 font-bold">31.8%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">HIGH</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Arunachal Pradesh (Tawang, Papum Pare)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">High Altitude Porters</td>
+                    <td class="py-2.5 px-2">2,190</td>
+                    <td class="py-2.5 px-2 text-amber-400 font-bold">29.1%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">HIGH</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Nagaland (Kohima, Mokokchung)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Jhum Terrace Cultivators</td>
+                    <td class="py-2.5 px-2">2,340</td>
+                    <td class="py-2.5 px-2 text-amber-400 font-bold">26.5%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">MODERATE</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Manipur (Imphal East, Churachandpur)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Handloom & Valley Agri</td>
+                    <td class="py-2.5 px-2">2,110</td>
+                    <td class="py-2.5 px-2 text-teal-400">19.4%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40">MODERATE</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Mizoram (Aizawl, Lunglei)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Steep Slope Domestic</td>
+                    <td class="py-2.5 px-2">1,820</td>
+                    <td class="py-2.5 px-2 text-amber-400">24.1%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">MODERATE</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Sikkim (East Sikkim, Namchi)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Organic Farming & Trekkers</td>
+                    <td class="py-2.5 px-2">1,480</td>
+                    <td class="py-2.5 px-2 text-teal-400">18.2%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40">LOW-MOD</span></td>
+                  </tr>
+                  <tr class="hover:bg-slate-900/50">
+                    <td class="py-2.5 px-3 font-sans font-medium text-white">Tripura (West Tripura, Dhalai)</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">Rubber Tappers & Farmers</td>
+                    <td class="py-2.5 px-2">1,280</td>
+                    <td class="py-2.5 px-2 text-teal-400">16.7%</td>
+                    <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40">CONTROLLED</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Occupational Breakdown & Resource Recommendation (5 cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 space-y-3">
+              <h3 class="font-semibold text-sm text-slate-200">OA Incidence by Occupational Profile</h3>
+              
+              <div class="space-y-2.5 text-xs">
+                <div>
+                  <div class="flex justify-between text-slate-400 mb-1">
+                    <span>Tea Pluckers (Basket load + downhill)</span>
+                    <span class="text-rose-400 font-mono font-bold">41.8% Positive</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-rose-500 h-2 rounded-full" style="width: 41.8%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-slate-400 mb-1">
+                    <span>Hill Terrace Farmers (Slope hoeing)</span>
+                    <span class="text-amber-400 font-mono font-bold">33.5% Positive</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-amber-500 h-2 rounded-full" style="width: 33.5%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-slate-400 mb-1">
+                    <span>Handloom Weavers (Sustained floor squat)</span>
+                    <span class="text-yellow-400 font-mono font-bold">25.1% Positive</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 25.1%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-slate-400 mb-1">
+                    <span>Sedentary / Urban Desk Control</span>
+                    <span class="text-teal-400 font-mono font-bold">8.4% Positive</span>
+                  </div>
+                  <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-teal-500 h-2 rounded-full" style="width: 8.4%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Health Mission Action Directive -->
+            <div class="bg-teal-950/30 border border-teal-500/30 rounded-xl p-4 space-y-2">
+              <span class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                AI Resource Planning Recommendation
+              </span>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Deploy <strong>12 additional mobile ASHA Wearable Kits</strong> to Dibrugarh and East Khasi Hills sub-centres. Initiate community ergonomic workshops distributing ergonomic pluck baskets with hip-load transfer belts to curb patellofemoral deterioration.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: PHC REFERRAL SLIP & REPORT (PRINT)  -->
+    <!-- ========================================== -->
+    <section id="view-report" class="tab-view hidden space-y-6">
+      <div class="flex justify-between items-center no-print">
+        <h2 class="text-xl font-bold text-white">Digital Health Referral & Clinical Summary</h2>
+        <div class="flex gap-2">
+          <button onclick="window.print()" class="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            <span>Print Official Referral Slip (PDF)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable Document Container -->
+      <div id="printable-report" class="bg-white text-slate-900 rounded-2xl p-8 border border-slate-300 shadow-2xl max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b-2 border-slate-900 pb-4">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-teal-700 text-white rounded-xl flex items-center justify-center font-bold text-2xl">
+              NHM
+            </div>
+            <div>
+              <div class="text-xs uppercase font-extrabold tracking-wider text-teal-800">Government of India • National Health Mission (NER)</div>
+              <h1 class="text-2xl font-black text-slate-900 tracking-tight">KNEE OSTEOARTHRITIS EARLY SCREENING REPORT</h1>
+              <div class="text-xs text-slate-600">Ayushman Bharat Primary Health Care Network • AI Screening Camp Slip</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <!-- Simulated QR code canvas -->
+            <div class="w-20 h-20 bg-slate-100 border border-slate-400 p-1 flex items-center justify-center ml-auto">
+              <canvas id="referralQrCanvas" width="72" height="72"></canvas>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500 block mt-1" id="reportRefId">REF-NER-2026-90412</span>
+          </div>
+        </div>
+
+        <!-- Patient & Camp Details Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+          <div>
+            <span class="text-slate-500 block">Patient Name:</span>
+            <strong class="text-slate-900 text-sm" id="repPatientName">Monali Bora</strong>
+          </div>
+          <div>
+            <span class="text-slate-500 block">Age / Gender / BMI:</span>
+            <strong class="text-slate-900 text-sm" id="repPatientStats">48 Yrs / Female / 25.1</strong>
+          </div>
+          <div>
+            <span class="text-slate-500 block">Occupation / State:</span>
+            <strong class="text-slate-900" id="repPatientOcc">Tea Plucker (Sonitpur, Assam)</strong>
+          </div>
+          <div>
+            <span class="text-slate-500 block">Screening Date & ASHA Worker:</span>
+            <strong class="text-slate-900">05-Oct-2026 / Sunita Gogoi (ASHA)</strong>
+          </div>
+        </div>
+
+        <!-- Multimodal AI Diagnostic Summary Table -->
+        <div class="space-y-2">
+          <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1">
+            Multimodal Assessment Results (Hardware Wearable Kit v2)
+          </h3>
+          <table class="w-full text-left text-xs border border-slate-200">
+            <thead class="bg-slate-100 text-slate-700">
+              <tr>
+                <th class="p-2 border">Modality</th>
+                <th class="p-2 border">Observed Signal Parameter</th>
+                <th class="p-2 border">Normal Reference</th>
+                <th class="p-2 border">Risk Score</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 font-mono">
+              <tr>
+                <td class="p-2 border font-sans font-semibold">1. Gait Kinematics (IMU)</td>
+                <td class="p-2 border" id="repGaitVal">GSI: 0.72 | Asymmetric stance lag | Cadence 94 spm</td>
+                <td class="p-2 border font-sans text-slate-600">GSI &gt; 0.90, balanced</td>
+                <td class="p-2 border font-bold text-amber-700" id="repGaitScore">62% (Moderate)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border font-sans font-semibold">2. Joint Acoustic VAG (Piezo)</td>
+                <td class="p-2 border" id="repVagVal">Crepitus burst rate: 22 bursts/min (Peak: 480 Hz)</td>
+                <td class="p-2 border font-sans text-slate-600">&lt; 5 bursts/min, smooth</td>
+                <td class="p-2 border font-bold text-rose-700" id="repVagScore">74% (High Alert)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border font-sans font-semibold">3. NER Lifestyle Risk Score</td>
+                <td class="p-2 border" id="repLifeVal">&gt;5 hrs squatting + steep hill load + tea basket</td>
+                <td class="p-2 border font-sans text-slate-600">&lt;2 hrs squatting, flatland</td>
+                <td class="p-2 border font-bold text-amber-700" id="repLifeScore">78% (High)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border font-sans font-semibold">4. Radiograph KL Grade (CNN)</td>
+                <td class="p-2 border" id="repKlVal">Grade 1: Doubtful joint space narrowing, subclinical</td>
+                <td class="p-2 border font-sans text-slate-600">Grade 0: Normal joint space</td>
+                <td class="p-2 border font-bold text-amber-700" id="repKlScore">Grade 1 (Early)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Overall Risk Verdict Box -->
+        <div class="p-4 rounded-xl border-2 border-amber-600 bg-amber-50 flex items-center justify-between">
+          <div>
+            <span class="text-xs uppercase font-extrabold text-amber-800">Final Triaged Risk Status</span>
+            <div class="text-xl font-black text-amber-900" id="repVerdictTitle">MODERATE RISK — EARLY OSTEOARTHRITIS MARKERS</div>
+            <p class="text-xs text-amber-800 mt-1">Pre-radiological degenerative changes detected via acoustic crepitus and gait asymmetry.</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-amber-800 font-medium">Composite AI Score</span>
+            <div class="text-3xl font-extrabold font-mono text-amber-900" id="repVerdictNum">68%</div>
+          </div>
+        </div>
+
+        <!-- Actionable Directives & Referral Destination -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+            <h4 class="font-bold text-slate-800 uppercase">Referral Action & Clinical Destination</h4>
+            <p class="text-slate-700"><strong>Referred To:</strong> Tezpur District Hospital Orthopedic OPD / PHC Rangapara</p>
+            <p class="text-slate-700"><strong>Target Timeframe:</strong> Within 14 working days for non-urgent evaluation</p>
+            <p class="text-slate-700"><strong>Advised Investigations:</strong> Bilateral standing AP knee radiographs, ESR/CRP check</p>
+          </div>
+
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+            <h4 class="font-bold text-slate-800 uppercase">Community & Lifestyle Prescription (Bilingual)</h4>
+            <p class="text-slate-700">• Avoid continuous floor squatting; switch to 1-foot high wooden stool (pidha) for cooking and tea leaf sorting.</p>
+            <p class="text-slate-700">• Use bilateral knee compression sleeves during heavy tea plucking rounds.</p>
+            <p class="text-slate-700">• Daily straight leg raise (SLR) quadriceps isometric drills (3 sets of 10 repetitions).</p>
+          </div>
+        </div>
+
+        <!-- Signatures Footer -->
+        <div class="pt-6 border-t border-slate-300 flex justify-between items-end text-xs text-slate-500">
+          <div>
+            <div class="w-36 border-b border-slate-400 mb-1"></div>
+            <span>ASHA Screening Facilitator Signature</span>
+          </div>
+          <div class="text-center">
+            <span class="font-mono text-[10px]">Digitally verified by NexGen Minds AI Diagnostic Suite</span>
+          </div>
+          <div class="text-right">
+            <div class="w-36 border-b border-slate-400 mb-1 ml-auto"></div>
+            <span>PHC Medical Officer Endorsement</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: HARDWARE & TINYML SYSTEM SPECS      -->
+    <!-- ========================================== -->
+    <section id="view-specs" class="tab-view hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded">
+              SIH 2026 Hardware Category Architecture
+            </span>
+          </div>
+          <h2 class="text-xl font-bold text-white mt-1">Wearable Knee Kit Hardware & Bill of Materials (BOM)</h2>
+          <p class="text-xs text-slate-400">Total prototype cost roughly ₹1,850 per kit, engineered for rugged field deployment in remote NER hill terrain</p>
+        </div>
+
+        <!-- Hardware Components Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Microcontroller & Radio</span>
+              <span class="text-xs font-mono text-slate-300">₹ 420</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">ESP32-S3-WROOM-1 (Dual Core 240MHz)</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• Built-in Bluetooth Low Energy (BLE 5.0) & Wi-Fi</li>
+              <li>• Vector instructions for fast INT8 TinyML inference</li>
+              <li>• Ultra-low power sleep states for long camp battery life</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Motion Sensor (IMU)</span>
+              <span class="text-xs font-mono text-slate-300">₹ 180</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">MPU-6050 / ICM-20948 6-Axis MotionTracking</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• 3-axis accelerometer (±4g) + 3-axis gyroscope (±500°/s)</li>
+              <li>• Captures stance strike shock and knee flexion angular velocity</li>
+              <li>• I2C interface @ 400kHz, 100Hz hardware FIFO</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Acoustic Contact Sensor</span>
+              <span class="text-xs font-mono text-slate-300">₹ 260</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">Piezoelectric Vibroarthrography Contact Disc + Preamp</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• MAX9814 preamplifier with Automatic Gain Control (AGC)</li>
+              <li>• Frequency response: 20 Hz to 4 kHz acoustic range</li>
+              <li>• Direct skin contact on patella with acoustic silicone pad</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Local Display & Feedback</span>
+              <span class="text-xs font-mono text-slate-300">₹ 310</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">0.96" I2C OLED Display + Piezo Buzzer</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• Displays immediate test instructions & battery status</li>
+              <li>• Audio beeps mark start and end of 30-second gait test</li>
+              <li>• Simple 3-button navigation (YES / NO / BACK) for ASHA</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Power Management</span>
+              <span class="text-xs font-mono text-slate-300">₹ 380</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">1200mAh 3.7V Li-ion + TP4056 USB-C Charger</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• Up to 14 hours continuous field screening per charge</li>
+              <li>• Standard USB-C mobile charger compatibility</li>
+              <li>• Over-voltage & short-circuit protection for village camps</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-cyan-400">Enclosure & Strapping</span>
+              <span class="text-xs font-mono text-slate-300">₹ 300</span>
+            </div>
+            <p class="text-xs text-slate-300 font-semibold">3D Printed IP54 Casing + Neoprene Knee Brace</p>
+            <ul class="text-[11px] text-slate-400 space-y-1">
+              <li>• Dust and moisture resistant for rain and damp NER hills</li>
+              <li>• Quick-release Velcro ergonomic knee sleeve</li>
+              <li>• Washable neoprene fabric with sensor docking port</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Total Cost Summary -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-lg">
+              ₹
+            </div>
+            <div>
+              <span class="font-bold text-slate-200">Total Hardware Kit Cost: ₹ 1,850 per Unit</span>
+              <p class="text-xs text-slate-400">Matches the ₹1,500 - 2,000 target outlined in Slide 4 of the NexGen Minds SIH proposal.</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold">
+              Production Scalable at &lt; ₹1,200 at volume
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- OFFLINE SYNC TOAST NOTIFICATION -->
+  <div id="syncToast" class="fixed bottom-5 right-5 z-50 bg-slate-900 border border-teal-500/50 text-slate-100 p-4 rounded-xl shadow-2xl transition-all duration-300 transform translate-y-24 opacity-0 flex items-center gap-3">
+    <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </div>
+    <div>
+      <span class="font-semibold text-xs text-white block" id="syncToastTitle">Syncing with State Health Grid...</span>
+      <span class="text-[11px] text-slate-400" id="syncToastDesc">Uploading 4 offline records to Guwahati Cloud Server</span>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    /* =========================================================================
+       1. GLOBAL STATE & LOCALIZATION DICTIONARY
+       ========================================================================= */
+    const state = {
+      language: 'en',
+      ttsEnabled: true,
+      isOnline: true,
+      testRunning: false,
+      testTimer: 0,
+      testInterval: null,
+      signalPreset: 'early_oa',
+      currentPatient: {
+        name: 'Monali Bora',
+        age: 48,
+        gender: 'Female',
+        district: 'Sonitpur, Assam',
+        weight: 58,
+        height: 152,
+        bmi: 25.1,
+        knee: 'Right Knee',
+        symptom: 'Crepitus & morning stiffness',
+        occupation: 'tea_worker',
+        squatting: 'severe',
+        terrain: 'steep',
+        climate: 'high',
+        injury: 'no',
+        vas: 4,
+        xrayKl: 1
+      },
+      computedRisk: {
+        gaitScore: 62,
+        acousticScore: 74,
+        lifestyleScore: 78,
+        xrayScore: 50,
+        composite: 68,
+        verdict: 'MODERATE RISK (EARLY OA)'
+      },
+      offlineQueueCount: 3
+    };
+
+    const i18n = {
+      en: {
+        welcome_voice: "Welcome to OsteoNER ASHA screening. Please ensure the wearable sensor is securely fastened over the patient's right knee before commencing the gait test.",
+        lifestyle_voice: "In the North Eastern Region, tea plucking and steep hill agriculture exert high mechanical pressure on the knee joints.",
+        test_start: "Please ask the patient to stand and walk at normal speed for 10 paces, then perform 5 sit-to-stand movements.",
+        test_complete: "Screening complete. Multimodal AI model has computed early osteoarthritis risk markers.",
+        verdict_moderate: "Test indicates moderate early osteoarthritis risk markers with joint sound crepitus. Recommended consultation at nearest PHC and reduced continuous floor squatting.",
+        verdict_high: "Urgent: High risk of accelerated osteoarthritis detected with severe acoustic crepitus and gait asymmetry. Please refer to District Hospital.",
+        verdict_low: "Knee joint function is within healthy parameters. Routine annual checkup recommended."
+      },
+      as: {
+        welcome_voice: "অষ্টিঅ'নেৰ (OsteoNER) আশা স্বাস্থ্য শিবিৰলৈ স্বাগতম। গতি পৰীক্ষা আৰম্ভ কৰাৰ পূৰ্বে সোঁ আঁঠুত ছেন্সৰটো সঠিকভাৱে লগাই লওক।",
+        lifestyle_voice: "উত্তৰ-পূব অঞ্চলৰ চাহ বাগিচা আৰু পাহাৰীয়া খেতিত আঁঠুৰ ওপৰত অধিক হেঁচা পৰে।",
+        test_start: "অনুগ্ৰহ কৰি ৰোগীক স্বাভাৱিক গতিত ১০ খোজ খোজকাঢ়িবলৈ কওক আৰু তাৰ পিছত ৫ বাৰ বহিবলৈ আৰু উঠিবলৈ কওক।",
+        test_complete: "পৰীক্ষা সম্পূৰ্ণ হ'ল। এআই বিশ্লেষণে প্ৰাৰম্ভিক আঁঠুৰ ক্ষয়ৰ লক্ষণ চিহ্নিত কৰিছে।",
+        verdict_moderate: "পৰীক্ষাত প্ৰাৰম্ভিক আঁঠুৰ বিষ আৰু জোৰাৰ শব্দ (crepitus) ধৰা পৰিছে। ওচৰৰ প্ৰাথমিক স্বাস্থ্য কেন্দ্ৰত পৰামৰ্শ লোৱা উচিত আৰু মজিয়াত দীৰ্ঘ সময় বহা পৰিহাৰ কৰক।",
+        verdict_high: "সতৰ্কতা: আঁঠুৰ জোৰাৰ গুৰুতৰ ক্ষয় আৰু শব্দ ধৰা পৰিছে। জিলা চিকিৎসালয়ৰ অস্থি বিশেষজ্ঞক দেখুৱাওক।",
+        verdict_low: "আঁঠুৰ অৱস্থা স্বাভাৱিক। বছৰেকীয়া স্বাস্থ্য পৰীক্ষা অব্যাহত ৰাখক।"
+      },
+      hi: {
+        welcome_voice: "ओस्टियो-एनईआर (OsteoNER) आशा स्वास्थ्य शिविर में आपका स्वागत है। चाल परीक्षण शुरू करने से पहले सेंसर को दाहिने घुटने पर अच्छी तरह बांधें।",
+        lifestyle_voice: "पूर्वोत्तर राज्यों में चाय बागान कार्य और पहाड़ी ढलानों पर चलने से घुटनों पर अत्यधिक दबाव पड़ता है।",
+        test_start: "कृपया मरीज को सामान्य गति से 10 कदम चलने और फिर 5 बार बैठने व खड़े होने के लिए कहें।",
+        test_complete: "परीक्षण पूरा हुआ। एआई विश्लेषण ने शुरुआती ऑस्टियोआर्थराइटिस के लक्षणों की पहचान की है।",
+        verdict_moderate: "परीक्षण में शुरुआती घुटने के घिसाव और जोड़ों से आवाज के संकेत मिले हैं। नजदीकी प्राथमिक स्वास्थ्य केंद्र पर दिखाएं और जमीन पर ज्यादा देर न बैठें।",
+        verdict_high: "चेतावनी: घुटनों में गंभीर घिसाव और चाल असंतुलन के लक्षण हैं। जिला अस्पताल में विशेषज्ञ को दिखाएं।",
+        verdict_low: "घुटनों का स्वास्थ्य सामान्य है। नियमित जांच कराते रहें।"
+      },
+      bn: {
+        welcome_voice: "অস্টিও-এনইআর (OsteoNER) আশা স্বাস্থ্য স্ক্রিনিংয়ে স্বাগতম। পরীক্ষা শুরুর আগে ডান হাঁটুতে সেন্সরটি সঠিকভাবে বেঁধে নিন।",
+        lifestyle_voice: "উত্তর-পূর্ব ভারতের পাহাড়ি ভূপ্রকৃতি এবং চা বাগানের কাজে হাঁটুর সংযোগস্থলে অতিরিক্ত চাপ পড়ে।",
+        test_start: "রোগীকে স্বাভাবিক গতিতে ১০ কদম হাঁটতে বলুন এবং তারপর ৫ বার উঠবস করতে বলুন।",
+        test_complete: "পরীক্ষা সম্পন্ন হয়েছে। প্রাথমিক ক্ষয়রোগের লক্ষণ শনাক্ত করা গেছে।",
+        verdict_moderate: "পরীক্ষায় হাঁটুর প্রাথমিক ক্ষয় ও খড়খড়ে শব্দ চিহ্নিত হয়েছে। পিএইচসি কেন্দ্রে পরামর্শ নিন এবং মেঝের ওপর দীর্ঘক্ষণ বসা থেকে বিরত থাকুন।",
+        verdict_high: "সতর্কতা: হাঁটুতে উচ্চমাত্রার ক্ষয় ও হাঁটার সমস্যা দেখা গেছে। জেলা হাসপাতালে দেখান।",
+        verdict_low: "হাঁটুর কার্যক্ষমতা স্বাভাবিক আছে।"
+      }
+    };
+
+    /* =========================================================================
+       2. SPEECH SYNTHESIS & VOICE GUIDANCE
+       ========================================================================= */
+    function toggleTTS() {
+      state.ttsEnabled = !state.ttsEnabled;
+      const btn = document.getElementById('ttsToggleBtn');
+      const label = document.getElementById('ttsStatusLabel');
+      const icon = document.getElementById('ttsIcon');
+
+      if (state.ttsEnabled) {
+        btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20";
+        label.innerText = "Voice: ON";
+        icon.classList.remove('text-slate-500');
+        icon.classList.add('text-emerald-400');
+        speakText("Voice guidance enabled.");
+      } else {
+        btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750";
+        label.innerText = "Voice: OFF";
+        icon.classList.remove('text-emerald-400');
+        icon.classList.add('text-slate-500');
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+      }
+    }
+
+    function speakText(text) {
+      if (!state.ttsEnabled || !window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+      
+      // Match voice language if available
+      const voices = window.speechSynthesis.getVoices();
+      const langCode = state.language === 'hi' ? 'hi-IN' : state.language === 'bn' ? 'bn-IN' : 'en-IN';
+      const matchedVoice = voices.find(v => v.lang.includes(langCode) || v.lang.includes(state.language));
+      if (matchedVoice) utterance.voice = matchedVoice;
+      
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakCurrentContext(type) {
+      const dict = i18n[state.language] || i18n.en;
+      if (type === 'welcome') speakText(dict.welcome_voice);
+      else if (type === 'lifestyle') speakText(dict.lifestyle_voice);
+    }
+
+    function playVoiceInstruction() {
+      const dict = i18n[state.language] || i18n.en;
+      speakText(dict.test_start);
+    }
+
+    function speakResultVerdict() {
+      const dict = i18n[state.language] || i18n.en;
+      if (state.computedRisk.composite >= 75) {
+        speakText(dict.verdict_high);
+      } else if (state.computedRisk.composite >= 45) {
+        speakText(dict.verdict_moderate);
+      } else {
+        speakText(dict.verdict_low);
+      }
+    }
+
+    function changeLanguage(lang) {
+      state.language = lang;
+      const dict = i18n[lang] || i18n.en;
+      speakText(`Language switched to ${lang === 'as' ? 'Assamese' : lang === 'hi' ? 'Hindi' : lang === 'bn' ? 'Bengali' : 'English'}`);
+    }
+
+    /* =========================================================================
+       3. NAVIGATION & TABS
+       ========================================================================= */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-teal-500/20', 'text-teal-300', 'border', 'border-teal-500/40');
+        btn.classList.add('text-slate-400');
+      });
+
+      const targetView = document.getElementById(`view-${tabId}`);
+      const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (targetView) targetView.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.classList.remove('text-slate-400');
+        targetBtn.classList.add('bg-teal-500/20', 'text-teal-300', 'border', 'border-teal-500/40');
+      }
+
+      if (tabId === 'report') {
+        renderReferralQR();
+      }
+    }
+
+    /* =========================================================================
+       4. CALCULATIONS & MULTIMODAL RISK SCORING ENGINE
+       ========================================================================= */
+    function calculateBMI() {
+      const weight = parseFloat(document.getElementById('patientWeight').value) || 0;
+      const heightCm = parseFloat(document.getElementById('patientHeight').value) || 0;
+      const bmiBadge = document.getElementById('bmiBadge');
+      
+      if (heightCm > 0 && weight > 0) {
+        const heightM = heightCm / 100;
+        const bmi = (weight / (heightM * heightM)).toFixed(1);
+        state.currentPatient.bmi = bmi;
+        let cat = 'Normal';
+        if (bmi < 18.5) cat = 'Underweight';
+        else if (bmi >= 25 && bmi < 30) cat = 'Overweight';
+        else if (bmi >= 30) cat = 'Obese';
+        
+        bmiBadge.innerText = `BMI: ${bmi} kg/m² (${cat})`;
+        recalculateHybridRisk();
+      }
+    }
+
+    function updateVAS(val) {
+      document.getElementById('vasValueLabel').innerText = `${val} / 10 (${val > 6 ? 'Severe' : val > 3 ? 'Moderate' : 'Mild'})`;
+      recalculateHybridRisk();
+    }
+
+    function recalculateHybridRisk() {
+      const occ = document.getElementById('riskOccupation').value;
+      const squat = document.getElementById('riskSquatting').value;
+      const terrain = document.getElementById('riskTerrain').value;
+      const climate = document.getElementById('riskClimate').value;
+      const injury = document.getElementById('riskInjury').value;
+      const vas = parseInt(document.getElementById('riskVAS').value) || 0;
+      const age = parseInt(document.getElementById('patientAge').value) || 45;
+      const bmi = parseFloat(state.currentPatient.bmi) || 24;
+
+      // 1. NER Lifestyle Score (0 - 100)
+      let lifeScore = 20;
+      if (occ === 'tea_worker') lifeScore += 30;
+      else if (occ === 'hill_farmer') lifeScore += 26;
+      else if (occ === 'porter') lifeScore += 32;
+      else if (occ === 'weaver') lifeScore += 18;
+      else if (occ === 'domestic') lifeScore += 15;
+
+      if (squat === 'severe') lifeScore += 25;
+      else if (squat === 'moderate') lifeScore += 16;
+      else if (squat === 'mild') lifeScore += 8;
+
+      if (terrain === 'steep') lifeScore += 15;
+      else if (terrain === 'rolling') lifeScore += 8;
+
+      if (climate === 'high') lifeScore += 8;
+      if (injury === 'yes') lifeScore += 12;
+      if (age > 50) lifeScore += 10;
+      if (bmi >= 25) lifeScore += 8;
+
+      lifeScore = Math.min(98, Math.max(10, lifeScore));
+
+      // Update Lifestyle display
+      document.getElementById('lifestyleProgressBar').style.width = `${lifeScore}%`;
+      const lifeBadge = document.getElementById('lifestyleScoreBadge');
+      lifeBadge.innerText = `${lifeScore} / 100 (${lifeScore >= 70 ? 'High' : lifeScore >= 40 ? 'Moderate' : 'Low'})`;
+      if (lifeScore >= 70) lifeBadge.className = "text-xs font-mono font-bold text-rose-400";
+      else if (lifeScore >= 40) lifeBadge.className = "text-xs font-mono font-bold text-amber-300";
+      else lifeBadge.className = "text-xs font-mono font-bold text-emerald-400";
+
+      // 2. Multimodal Ensemble Score Fusion
+      // Weights: Gait 30%, Acoustic 35%, Lifestyle Prior 25%, Radiograph 10%
+      const gaitScore = state.computedRisk.gaitScore;
+      const acousticScore = state.computedRisk.acousticScore;
+      const xrayScore = state.currentPatient.xrayKl * 24;
+
+      const composite = Math.round((gaitScore * 0.30) + (acousticScore * 0.35) + (lifeScore * 0.25) + (xrayScore * 0.10));
+      state.computedRisk.lifestyleScore = lifeScore;
+      state.computedRisk.composite = composite;
+
+      // Update result card
+      const numElem = document.getElementById('compositeScoreNum');
+      const badgeElem = document.getElementById('triageBadge');
+      const cardElem = document.getElementById('aiResultCard');
+      const repNum = document.getElementById('repVerdictNum');
+      const repTitle = document.getElementById('repVerdictTitle');
+
+      numElem.innerText = `${composite}%`;
+      if (repNum) repNum.innerText = `${composite}%`;
+
+      document.getElementById('scoreLifestyle').innerText = `${lifeScore}%`;
+      document.getElementById('barLifestyle').style.width = `${lifeScore}%`;
+
+      if (composite >= 75) {
+        state.computedRisk.verdict = 'HIGH RISK (ACCELERATED OA)';
+        badgeElem.innerText = 'HIGH RISK (ACCELERATED OA)';
+        badgeElem.className = 'px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        numElem.className = 'text-3xl font-extrabold text-rose-400 font-mono my-1';
+        cardElem.className = 'bg-slate-900 border-2 border-rose-500/60 rounded-2xl p-5 shadow-2xl space-y-4 relative overflow-hidden';
+        if (repTitle) repTitle.innerText = 'HIGH RISK — URGENT ORTHOPEDIC SPECIALIST EVALUATION';
+      } else if (composite >= 45) {
+        state.computedRisk.verdict = 'MODERATE RISK (EARLY OA)';
+        badgeElem.innerText = 'MODERATE RISK (EARLY OA)';
+        badgeElem.className = 'px-2.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        numElem.className = 'text-3xl font-extrabold text-amber-400 font-mono my-1';
+        cardElem.className = 'bg-slate-900 border-2 border-amber-500/50 rounded-2xl p-5 shadow-2xl space-y-4 relative overflow-hidden';
+        if (repTitle) repTitle.innerText = 'MODERATE RISK — EARLY OSTEOARTHRITIS MARKERS';
+      } else {
+        state.computedRisk.verdict = 'LOW RISK (HEALTHY / ROUTINE)';
+        badgeElem.innerText = 'LOW RISK (HEALTHY)';
+        badgeElem.className = 'px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        numElem.className = 'text-3xl font-extrabold text-emerald-400 font-mono my-1';
+        cardElem.className = 'bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 shadow-2xl space-y-4 relative overflow-hidden';
+        if (repTitle) repTitle.innerText = 'LOW RISK — ROUTINE ANNUAL HEALTH CHECKUP';
+      }
+
+      // Sync into printable report values
+      syncToPrintableReport();
+    }
+
+    function syncToPrintableReport() {
+      const pName = document.getElementById('patientName').value;
+      const pAge = document.getElementById('patientAge').value;
+      const pGender = document.getElementById('patientGender').value;
+      const pDistrict = document.getElementById('patientDistrict').value;
+      const occText = document.getElementById('riskOccupation').options[document.getElementById('riskOccupation').selectedIndex].text;
+
+      const rName = document.getElementById('repPatientName');
+      const rStats = document.getElementById('repPatientStats');
+      const rOcc = document.getElementById('repPatientOcc');
+      const rGait = document.getElementById('repGaitScore');
+      const rVag = document.getElementById('repVagScore');
+      const rLife = document.getElementById('repLifeScore');
+
+      if (rName) rName.innerText = pName;
+      if (rStats) rStats.innerText = `${pAge} Yrs / ${pGender} / BMI ${state.currentPatient.bmi}`;
+      if (rOcc) rOcc.innerText = `${occText.split('(')[0]} (${pDistrict})`;
+      if (rGait) rGait.innerText = `${state.computedRisk.gaitScore}%`;
+      if (rVag) rVag.innerText = `${state.computedRisk.acousticScore}%`;
+      if (rLife) rLife.innerText = `${state.computedRisk.lifestyleScore}%`;
+    }
+
+    /* =========================================================================
+       5. SAMPLE PATIENTS LOADER
+       ========================================================================= */
+    function loadSamplePatient(cohort) {
+      if (cohort === 'tea_worker') {
+        document.getElementById('patientName').value = 'Monali Bora';
+        document.getElementById('patientAge').value = '48';
+        document.getElementById('patientGender').value = 'Female';
+        document.getElementById('patientDistrict').value = 'Sonitpur, Assam';
+        document.getElementById('patientWeight').value = '58';
+        document.getElementById('patientHeight').value = '152';
+        document.getElementById('riskOccupation').value = 'tea_worker';
+        document.getElementById('riskSquatting').value = 'severe';
+        document.getElementById('riskTerrain').value = 'steep';
+        document.getElementById('riskClimate').value = 'high';
+        document.getElementById('riskInjury').value = 'no';
+        document.getElementById('riskVAS').value = '5';
+        changeSignalPreset('early_oa');
+        loadSampleXRay('early');
+      } else if (cohort === 'hill_farmer') {
+        document.getElementById('patientName').value = 'Khabir Marak';
+        document.getElementById('patientAge').value = '55';
+        document.getElementById('patientGender').value = 'Male';
+        document.getElementById('patientDistrict').value = 'East Khasi Hills, Meghalaya';
+        document.getElementById('patientWeight').value = '64';
+        document.getElementById('patientHeight').value = '162';
+        document.getElementById('riskOccupation').value = 'hill_farmer';
+        document.getElementById('riskSquatting').value = 'moderate';
+        document.getElementById('riskTerrain').value = 'steep';
+        document.getElementById('riskClimate').value = 'high';
+        document.getElementById('riskInjury').value = 'yes';
+        document.getElementById('riskVAS').value = '6';
+        changeSignalPreset('moderate_oa');
+        loadSampleXRay('mod');
+      } else if (cohort === 'young_weaver') {
+        document.getElementById('patientName').value = 'Priyanka Das';
+        document.getElementById('patientAge').value = '29';
+        document.getElementById('patientGender').value = 'Female';
+        document.getElementById('patientDistrict').value = 'West Tripura, Tripura';
+        document.getElementById('patientWeight').value = '50';
+        document.getElementById('patientHeight').value = '156';
+        document.getElementById('riskOccupation').value = 'weaver';
+        document.getElementById('riskSquatting').value = 'moderate';
+        document.getElementById('riskTerrain').value = 'flat';
+        document.getElementById('riskClimate').value = 'low';
+        document.getElementById('riskInjury').value = 'no';
+        document.getElementById('riskVAS').value = '1';
+        changeSignalPreset('healthy');
+        loadSampleXRay('normal');
+      }
+
+      calculateBMI();
+      speakText(`Loaded ${cohort.replace('_', ' ')} patient profile.`);
+    }
+
+    /* =========================================================================
+       6. SAMPLE X-RAY GENERATOR (CANVAS SYNTHESIZER)
+       ========================================================================= */
+    function loadSampleXRay(type) {
+      const canvas = document.getElementById('xraySimCanvas');
+      const placeholder = document.getElementById('xrayIconPlaceholder');
+      canvas.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 80, 80);
+
+      // Draw stylized knee bone radiograph silhouette
+      ctx.fillStyle = '#cbd5e1';
+      // Femoral condyle
+      ctx.beginPath();
+      ctx.ellipse(30, 24, 14, 18, 0, 0, Math.PI * 2);
+      ctx.ellipse(50, 24, 14, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tibial plateau
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(40, 60, 28, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Joint gap
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 42);
+      ctx.lineTo(62, 42);
+      ctx.stroke();
+
+      const klBadge = document.getElementById('klGradeBadge');
+      const jsnBadge = document.getElementById('jsnBadge');
+      const osteoBadge = document.getElementById('osteoBadge');
+      const insight = document.getElementById('xrayAiInsight');
+
+      if (type === 'early') {
+        state.currentPatient.xrayKl = 1;
+        klBadge.innerText = 'Grade 1: Doubtful JSN';
+        klBadge.className = 'font-bold font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30';
+        jsnBadge.innerText = 'Minimal Medial (3.8mm vs 5.2mm ref)';
+        osteoBadge.innerText = 'Subtle tibial spine sharpening';
+        insight.innerText = 'Early pre-radiological changes. Traditional X-ray often misses this phase; our IMU-VAG acoustic crepitus flags early molecular cartilage fibrillations.';
+      } else if (type === 'mod') {
+        state.currentPatient.xrayKl = 2;
+        klBadge.innerText = 'Grade 2: Definite Osteophytes';
+        klBadge.className = 'font-bold font-mono text-rose-400 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30';
+        jsnBadge.innerText = 'Moderate Medial Narrowing (2.6mm)';
+        osteoBadge.innerText = 'Definite marginal osteophytes at tibial margins';
+        insight.innerText = 'Established mild-to-moderate cartilage thinning. Candidate for immediate offloading braces and physiotherapy.';
+      } else {
+        state.currentPatient.xrayKl = 0;
+        klBadge.innerText = 'Grade 0: Normal Knee Space';
+        klBadge.className = 'font-bold font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30';
+        jsnBadge.innerText = 'Symmetric 5.4mm space medial & lateral';
+        osteoBadge.innerText = 'None';
+        insight.innerText = 'Preserved joint congruency. No signs of pathological cartilage space reduction.';
+      }
+
+      recalculateHybridRisk();
+    }
+
+    /* =========================================================================
+       7. TEST EXECUTION WITH TIMER & SENSOR ANIMATION
+       ========================================================================= */
+    function toggleTestExecution() {
+      if (state.testRunning) {
+        clearInterval(state.testInterval);
+        state.testRunning = false;
+        document.getElementById('testBtnText').innerText = "Run 30-Second Screening Test";
+        document.getElementById('testBtnIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+        document.getElementById('testProgressBadge').innerText = "Test aborted";
+        return;
+      }
+
+      state.testRunning = true;
+      state.testTimer = 0;
+      document.getElementById('testBtnText').innerText = "Stop / Abort Screening";
+      document.getElementById('testBtnIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>';
+      
+      playVoiceInstruction();
+
+      state.testInterval = setInterval(() => {
+        state.testTimer += 0.5;
+        document.getElementById('testTimerText').innerText = `Test Duration: ${state.testTimer.toFixed(1)}s / 30.0s`;
+        const pct = Math.min(100, Math.round((state.testTimer / 30) * 100));
+        document.getElementById('testProgressBadge').innerText = `Sampling ${pct}% ...`;
+
+        if (state.testTimer >= 30) {
+          clearInterval(state.testInterval);
+          state.testRunning = false;
+          document.getElementById('testBtnText').innerText = "Re-Run 30-Second Test";
+          document.getElementById('testProgressBadge').innerText = "Analysis Complete ✓";
+          const dict = i18n[state.language] || i18n.en;
+          speakText(dict.test_complete);
+          setTimeout(() => speakResultVerdict(), 2200);
+        }
+      }, 500);
+    }
+
+    /* =========================================================================
+       8. REAL-TIME OSCILLOSCOPE & SIGNAL SIMULATOR
+       ========================================================================= */
+    const imuCanvas = document.getElementById('imuOscilloscope');
+    const acousticCanvas = document.getElementById('acousticOscilloscope');
+    const miniGaitCanvas = document.getElementById('miniGaitCanvas');
+    const miniAcousticCanvas = document.getElementById('miniAcousticCanvas');
+
+    let waveOffset = 0;
+
+    function changeSignalPreset(preset) {
+      state.signalPreset = preset;
+      if (preset === 'early_oa') {
+        state.computedRisk.gaitScore = 62;
+        state.computedRisk.acousticScore = 74;
+        document.getElementById('gsiMetric').innerText = '0.72 (Norm: >0.90)';
+        document.getElementById('vagBurstMetric').innerText = '22 / cycle';
+        document.getElementById('valVagPeak').innerText = '480 Hz';
+      } else if (preset === 'moderate_oa') {
+        state.computedRisk.gaitScore = 76;
+        state.computedRisk.acousticScore = 88;
+        document.getElementById('gsiMetric').innerText = '0.58 (Severe lag)';
+        document.getElementById('vagBurstMetric').innerText = '46 / cycle';
+        document.getElementById('valVagPeak').innerText = '610 Hz';
+      } else if (preset === 'severe_oa') {
+        state.computedRisk.gaitScore = 89;
+        state.computedRisk.acousticScore = 94;
+        document.getElementById('gsiMetric').innerText = '0.41 (Extreme)';
+        document.getElementById('vagBurstMetric').innerText = '68 / cycle';
+        document.getElementById('valVagPeak').innerText = '790 Hz';
+      } else {
+        state.computedRisk.gaitScore = 18;
+        state.computedRisk.acousticScore = 14;
+        document.getElementById('gsiMetric').innerText = '0.94 (Healthy)';
+        document.getElementById('vagBurstMetric').innerText = '2 / cycle';
+        document.getElementById('valVagPeak').innerText = '85 Hz';
+      }
+
+      document.getElementById('scoreGait').innerText = `${state.computedRisk.gaitScore}%`;
+      document.getElementById('barGait').style.width = `${state.computedRisk.gaitScore}%`;
+      document.getElementById('scoreAcoustic').innerText = `${state.computedRisk.acousticScore}%`;
+      document.getElementById('barAcoustic').style.width = `${state.computedRisk.acousticScore}%`;
+
+      recalculateHybridRisk();
+    }
+
+    function injectNoise() {
+      waveOffset += 25;
+      const badge = document.getElementById('crepitusSpikeBadge');
+      badge.innerText = "Terrain Impact Shock Filtered ✓";
+      badge.className = "absolute bottom-2 right-2 text-[10px] font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/40";
+      setTimeout(() => {
+        badge.innerText = "Crepitus Spikes Detected: 14 bursts/min";
+        badge.className = "absolute bottom-2 right-2 text-[10px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40";
+      }, 2500);
+    }
+
+    function animateWaveforms() {
+      waveOffset += 0.05;
+
+      // 1. Draw Large IMU Kinematics
+      if (imuCanvas && imuCanvas.getContext) {
+        const ctx = imuCanvas.getContext('2d');
+        const w = (imuCanvas.width = imuCanvas.clientWidth);
+        const h = (imuCanvas.height = imuCanvas.clientHeight);
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Center line
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+
+        // Accel Z curve (cyan)
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const t = (x * 0.02) + waveOffset;
+          // periodic gait cycle with heel strike impact
+          const stride = Math.sin(t * 1.5);
+          const heelStrike = Math.exp(-Math.pow((t % 4.2) - 1.2, 2) * 8) * 0.8;
+          const y = (h / 2) - ((stride * 0.4 + heelStrike) * (h * 0.35));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Gyro Y curve (emerald)
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const t = (x * 0.02) + waveOffset + 0.8;
+          const flexExt = Math.cos(t * 1.5) * Math.sin(t * 0.5);
+          const y = (h / 2) - (flexExt * (h * 0.28));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 2. Draw Large VAG Acoustic Crepitus (rose + amber spikes)
+      if (acousticCanvas && acousticCanvas.getContext) {
+        const ctx = acousticCanvas.getContext('2d');
+        const w = (acousticCanvas.width = acousticCanvas.clientWidth);
+        const h = (acousticCanvas.height = acousticCanvas.clientHeight);
+
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+
+        const isPatho = state.signalPreset !== 'healthy';
+        const noiseFactor = isPatho ? 1.4 : 0.2;
+
+        for (let x = 0; x < w; x++) {
+          const t = (x * 0.04) + waveOffset * 2;
+          const baseNoise = (Math.sin(t * 12) + Math.cos(t * 27) + (Math.random() - 0.5) * 0.8) * 0.12 * noiseFactor;
+          
+          // Occasional sharp crepitus bursts
+          let burst = 0;
+          if (isPatho && Math.sin(t * 0.8) > 0.6) {
+            burst = (Math.sin(t * 85) + (Math.random() - 0.5) * 1.8) * 0.55;
+          }
+
+          const y = (h / 2) - ((baseNoise + burst) * (h * 0.42));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 3. Mini canvases on camp tab
+      if (miniGaitCanvas && miniGaitCanvas.getContext) {
+        const ctx = miniGaitCanvas.getContext('2d');
+        const w = (miniGaitCanvas.width = miniGaitCanvas.clientWidth);
+        const h = (miniGaitCanvas.height = miniGaitCanvas.clientHeight);
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const t = (x * 0.04) + waveOffset;
+          const y = (h / 2) - (Math.sin(t * 2) * (h * 0.35));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      if (miniAcousticCanvas && miniAcousticCanvas.getContext) {
+        const ctx = miniAcousticCanvas.getContext('2d');
+        const w = (miniAcousticCanvas.width = miniAcousticCanvas.clientWidth);
+        const h = (miniAcousticCanvas.height = miniAcousticCanvas.clientHeight);
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const t = (x * 0.08) + waveOffset * 3;
+          const spike = Math.sin(t * 0.6) > 0.5 ? (Math.random() - 0.5) * 0.7 : 0.05 * Math.sin(t * 10);
+          const y = (h / 2) - (spike * (h * 0.4));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(animateWaveforms);
+    }
+
+    /* =========================================================================
+       9. PURE CANVAS QR CODE RENDERER (OFFLINE REFERRAL CODE)
+       ========================================================================= */
+    function renderReferralQR() {
+      const canvas = document.getElementById('referralQrCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const s = canvas.width;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, s, s);
+
+      ctx.fillStyle = '#0f172a';
+      const cellSize = 4;
+      const cells = Math.floor(s / cellSize);
+
+      // Seed pseudo-random reproducible QR pattern
+      let seed = 4289;
+      function rnd() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      }
+
+      // Finder corners
+      function drawFinder(ox, oy) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(ox * cellSize, oy * cellSize, 7 * cellSize, 7 * cellSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect((ox + 1) * cellSize, (oy + 1) * cellSize, 5 * cellSize, 5 * cellSize);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect((ox + 2) * cellSize, (oy + 2) * cellSize, 3 * cellSize, 3 * cellSize);
+      }
+
+      drawFinder(1, 1);
+      drawFinder(cells - 8, 1);
+      drawFinder(1, cells - 8);
+
+      // Internal payload noise
+      for (let y = 0; y < cells; y++) {
+        for (let x = 0; x < cells; x++) {
+          // Avoid corners
+          if ((x < 9 && y < 9) || (x > cells - 10 && y < 9) || (x < 9 && y > cells - 10)) continue;
+          if (rnd() > 0.55) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    function generateAndOpenReferral() {
+      syncToPrintableReport();
+      switchTab('report');
+      speakText("Referral slip generated with encrypted QR verification.");
+    }
+
+    /* =========================================================================
+       10. OFFLINE SYNC SIMULATOR
+       ========================================================================= */
+    function toggleNetworkMode() {
+      state.isOnline = !state.isOnline;
+      const badge = document.getElementById('networkBadge');
+      const text = document.getElementById('networkText');
+
+      if (state.isOnline) {
+        badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Online / Synced</span>';
+        triggerCloudSync();
+      } else {
+        badge.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all bg-amber-500/10 border-amber-500/40 text-amber-300";
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Offline Mode (Queue: 3)</span>';
+        speakText("Offline mode active. Records will be safely saved in local storage.");
+      }
+    }
+
+    function triggerCloudSync() {
+      const toast = document.getElementById('syncToast');
+      const title = document.getElementById('syncToastTitle');
+      const desc = document.getElementById('syncToastDesc');
+
+      title.innerText = "Syncing with State Health Grid...";
+      desc.innerText = "Batch uploading camp screening telemetry to Guwahati Cloud Server";
+      toast.classList.remove('translate-y-24', 'opacity-0');
+
+      setTimeout(() => {
+        title.innerText = "Sync Complete ✓";
+        desc.innerText = "All 4 records uploaded. Registry updated with Sonitpur District Hospital.";
+        setTimeout(() => {
+          toast.classList.add('translate-y-24', 'opacity-0');
+        }, 2500);
+      }, 2000);
+    }
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateBMI();
+      loadSampleXRay('early');
+      renderReferralQR();
+      requestAnimationFrame(animateWaveforms);
+    });
+  </script>
+</body>
+</html>
